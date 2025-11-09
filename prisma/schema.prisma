@@ -1,0 +1,145 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------
+// Modèles
+// ---------------------
+
+model Clinic {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  users    User[]
+  patients Patient[]
+  Service  Service[]
+  Invoice  Invoice[]
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  role          Role
+  password      String
+  clinicId      String?
+  Clinic        Clinic?        @relation(fields: [clinicId], references: [id])
+  appointments  Appointment[]  @relation("DoctorAppointments")
+  consultations Consultation[] @relation("DoctorConsultations")
+  prescriptions Prescription[] @relation("DoctorPrescriptions")
+}
+
+model Patient {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  age           Int
+  condition     String         @default("N/A")
+  clinicId      String
+  Clinic        Clinic         @relation(fields: [clinicId], references: [id])
+  appointments  Appointment[]
+  consultations Consultation[]
+  prescriptions Prescription[]
+  Invoice       Invoice[]
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  patientId    String
+  doctorId     String
+  startTime    DateTime          @default(now())
+  endTime      DateTime          @default(now())
+  status       AppointmentStatus @default(SCHEDULED)
+  reason       String?
+  Patient      Patient           @relation(fields: [patientId], references: [id])
+  Doctor       User              @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  consultation Consultation?
+  Invoice      Invoice[]
+
+  @@index([doctorId, startTime, endTime])
+  @@index([patientId, startTime])
+}
+
+model Consultation {
+  id            String         @id @default(cuid())
+  doctorId      String
+  patientId     String
+  appointmentId String?        @unique // ✅ ajout ici
+  diagnosis     String
+  notes         String?
+  createdAt     DateTime       @default(now())
+  prescriptions Prescription[]
+
+  doctor      User         @relation("DoctorConsultations", fields: [doctorId], references: [id])
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+}
+
+model Prescription {
+  id             String   @id @default(cuid())
+  consultationId String
+  doctorId       String
+  patientId      String
+  medications    String? // JSON ou texte libre
+  instructions   String?
+  pdfUrl         String?
+  createdAt      DateTime @default(now())
+
+  consultation Consultation @relation(fields: [consultationId], references: [id])
+  doctor       User         @relation("DoctorPrescriptions", fields: [doctorId], references: [id])
+  patient      Patient      @relation(fields: [patientId], references: [id])
+
+  @@index([consultationId])
+  @@index([patientId, createdAt])
+}
+
+// Enum pour les rôles
+enum Role {
+  ADMIN
+  DOCTOR
+  RECEPTIONIST
+  PATIENT
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  clinicId    String
+  name        String
+  description String?
+  price       Float
+  createdAt   DateTime @default(now())
+
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+
+  @@index([clinicId])
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  clinicId      String
+  patientId     String
+  appointmentId String?
+  amount        Float
+  pdfUrl        String?
+  status        String   @default("PENDING")
+  stripeSession String?
+  createdAt     DateTime @default(now())
+
+  clinic      Clinic       @relation(fields: [clinicId], references: [id])
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([clinicId])
+  @@index([patientId])
+}
+
+// Statut de rendez-vous
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELLED
+  DONE
+}
