@@ -77,12 +77,73 @@ export async function GET(req: Request) {
       },
     });
 
+    // Calculer les données pour les graphiques (semaine en cours)
+    const weekStart = new Date(today);
+    const day = weekStart.getDay(); // 0 = dimanche
+    const diffToMonday = (day + 6) % 7; // calcule le lundi
+    weekStart.setDate(weekStart.getDate() - diffToMonday);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    // Récupérer tous les rendez-vous de la semaine
+    const weekAppointments = await prisma.appointment.findMany({
+      where: {
+        startTime: { gte: weekStart, lt: weekEnd },
+        Patient: { clinicId: session.user.clinicId },
+      },
+      select: {
+        startTime: true,
+      },
+    });
+
+    // Récupérer toutes les consultations de la semaine
+    const weekConsultations = await prisma.consultation.findMany({
+      where: {
+        createdAt: { gte: weekStart, lt: weekEnd },
+        patient: {
+          clinicId: session.user.clinicId
+        }
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    // Grouper par jour de la semaine (Lundi à Dimanche)
+    // JavaScript: 0 = Dimanche, 1 = Lundi, 2 = Mardi, 3 = Mercredi, 4 = Jeudi, 5 = Vendredi, 6 = Samedi
+    const dayNames = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+    const dayNumbers = [1, 2, 3, 4, 5, 6, 0]; // Correspondance avec getDay()
+    
+    const chartData = dayNames.map((dayName, index) => {
+      const dayOfWeek = dayNumbers[index];
+      
+      // Compter les rendez-vous pour ce jour
+      const appointmentsCount = weekAppointments.filter((apt) => {
+        const aptDate = new Date(apt.startTime);
+        return aptDate.getDay() === dayOfWeek;
+      }).length;
+
+      // Compter les consultations pour ce jour
+      const consultationsCount = weekConsultations.filter((cons) => {
+        const consDate = new Date(cons.createdAt);
+        return consDate.getDay() === dayOfWeek;
+      }).length;
+
+      return {
+        name: dayName,
+        rendezvous: appointmentsCount,
+        consultations: consultationsCount,
+      };
+    });
+
     return NextResponse.json({
       appointments,
       patients: patientsCount,
       appointmentsToday,
       revenue,
       consultationsCount,
+      chartData, // Ajouter les données pour les graphiques
     });
   } catch (error) {
     console.error(error);

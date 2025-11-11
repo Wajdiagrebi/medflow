@@ -73,7 +73,7 @@ export default function PatientDashboard() {
       const invoicesRes = await fetch("/api/invoices");
       if (invoicesRes.ok) {
         const invoicesData = await invoicesRes.json();
-        setInvoices(invoicesData || []);
+        setInvoices(invoicesData.invoices || []);
       }
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
@@ -174,10 +174,10 @@ export default function PatientDashboard() {
       </div>
 
       {/* Actions rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Link
           href="/patient/appointments/new"
-          className="bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700 transition flex items-center gap-3"
+          className="bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700 transition flex items-center gap-3 shadow-md hover:shadow-lg"
         >
           <Plus className="w-5 h-5" />
           <div>
@@ -188,7 +188,7 @@ export default function PatientDashboard() {
 
         <Link
           href="/patient/appointments"
-          className="bg-green-600 text-white p-4 rounded-lg hover:bg-green-700 transition flex items-center gap-3"
+          className="bg-green-600 text-white p-4 rounded-lg hover:bg-green-700 transition flex items-center gap-3 shadow-md hover:shadow-lg"
         >
           <Calendar className="w-5 h-5" />
           <div>
@@ -198,8 +198,19 @@ export default function PatientDashboard() {
         </Link>
 
         <Link
+          href="/patient/documents"
+          className="bg-purple-600 text-white p-4 rounded-lg hover:bg-purple-700 transition flex items-center gap-3 shadow-md hover:shadow-lg"
+        >
+          <FileText className="w-5 h-5" />
+          <div>
+            <p className="font-semibold">Mes Documents</p>
+            <p className="text-sm opacity-90">Prescriptions et factures</p>
+          </div>
+        </Link>
+
+        <Link
           href="/patient/dashboard/invoices"
-          className="bg-purple-600 text-white p-4 rounded-lg hover:bg-purple-700 transition flex items-center gap-3"
+          className="bg-orange-600 text-white p-4 rounded-lg hover:bg-orange-700 transition flex items-center gap-3 shadow-md hover:shadow-lg"
         >
           <DollarSign className="w-5 h-5" />
           <div>

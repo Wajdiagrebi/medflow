@@ -6,30 +6,38 @@ import { useRouter } from "next/navigation";
 import LoginComponent from "@/components/Login";
 
 // Composant interne qui vérifie la session
+// Note: Le middleware redirige déjà /login → dashboard si authentifié
+// Cette redirection côté client est un fallback au cas où le middleware ne le ferait pas
 function LoginContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
     // Si l'utilisateur est déjà connecté, rediriger vers son dashboard
+    // Utiliser replace au lieu de push pour éviter les boucles
     if (status === "authenticated" && session) {
       const role = session.user.role;
+      let redirectUrl = "/admin/dashboard";
+      
       switch (role) {
         case "ADMIN":
-          router.push("/admin/dashboard");
+          redirectUrl = "/admin/dashboard";
           break;
         case "DOCTOR":
-          router.push("/doctor/consultations");
+          redirectUrl = "/doctor/consultations";
           break;
         case "RECEPTIONIST":
-          router.push("/reception/dashboard");
+          redirectUrl = "/reception/dashboard";
           break;
         case "PATIENT":
-          router.push("/patient/dashboard");
+          redirectUrl = "/patient/dashboard";
           break;
         default:
-          router.push("/admin/dashboard");
+          redirectUrl = "/admin/dashboard";
       }
+      
+      // Utiliser replace pour éviter d'ajouter à l'historique
+      router.replace(redirectUrl);
     }
   }, [session, status, router]);
 

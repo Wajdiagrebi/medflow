@@ -2,8 +2,9 @@
 
 import { SessionProvider, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/navigation/Navbar";
-import Breadcrumbs from "@/components/navigation/Breadcrumbs";
+// Navbar et Breadcrumbs supprimés - le dashboard utilise son propre Header et Sidebar
+// import Navbar from "@/components/navigation/Navbar";
+// import Breadcrumbs from "@/components/navigation/Breadcrumbs";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
 import { createContext, useContext, ReactNode, useEffect } from "react";
 
@@ -72,8 +73,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
       <ToastContext.Provider value={{ showToast }}>
         <AuthenticatedContent>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Navbar />
-            <Breadcrumbs />
+            {/* Navbar et Breadcrumbs supprimés - le dashboard utilise son propre Header et Sidebar */}
             <main className="max-w-7xl mx-auto">{children}</main>
             <ToastContainer toasts={toasts} removeToast={removeToast} />
           </div>

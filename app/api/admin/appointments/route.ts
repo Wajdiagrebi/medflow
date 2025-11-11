@@ -85,7 +85,24 @@ export async function POST(req: Request) {
         message: "endTime doit être après startTime",
         path: ["endTime"],
       });
-    const { patientId, doctorId, startTime, endTime, status, reason } = schema.parse(body);
+    
+    // Utiliser safeParse pour mieux gérer les erreurs
+    const validationResult = schema.safeParse(body);
+    if (!validationResult.success) {
+      const errorMessages: string[] = [];
+      validationResult.error.issues.forEach((err) => {
+        const field = err.path.join(".");
+        const message = err.message;
+        errorMessages.push(`${field}: ${message}`);
+      });
+      return NextResponse.json({ 
+        error: "Erreur de validation",
+        message: "Les données fournies sont invalides",
+        details: errorMessages.join(", ")
+      }, { status: 400 });
+    }
+    
+    const { patientId, doctorId, startTime, endTime, status, reason } = validationResult.data;
 
     // Vérifier que patient et docteur appartiennent à la même clinique que l'utilisateur
     const [patient, doctor] = await Promise.all([

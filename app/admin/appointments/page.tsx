@@ -105,6 +105,21 @@ export default function AdminAppointmentsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation côté client
+    if (!form.patientId || !form.doctorId || !form.startTime || !form.endTime) {
+      alert("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+    
+    const startDate = new Date(form.startTime);
+    const endDate = new Date(form.endTime);
+    
+    if (endDate <= startDate) {
+      alert("L'heure de fin doit être après l'heure de début");
+      return;
+    }
+    
     setLoading(true);
     try {
       const url = editingAppointment
@@ -118,13 +133,51 @@ export default function AdminAppointmentsPage() {
         body: JSON.stringify({
           patientId: form.patientId,
           doctorId: form.doctorId,
-          startTime: new Date(form.startTime).toISOString(),
-          endTime: new Date(form.endTime).toISOString(),
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
           reason: form.reason,
         }),
       });
 
-      const result = await response.json();
+      let result: any = {};
+      let responseText = "";
+      
+      try {
+        responseText = await response.text();
+        
+        console.log("=== DÉTAILS DE LA RÉPONSE ===");
+        console.log("Status:", response.status);
+        console.log("Status Text:", response.statusText);
+        console.log("Content-Type:", response.headers.get("content-type"));
+        console.log("Réponse brute (longueur):", responseText.length);
+        console.log("Réponse brute (contenu):", responseText);
+        console.log("=============================");
+        
+        if (responseText && responseText.trim()) {
+          try {
+            result = JSON.parse(responseText);
+            console.log("Données parsées avec succès:", result);
+            console.log("Clés de l'objet result:", Object.keys(result));
+            console.log("Type de result:", typeof result);
+          } catch (parseError: any) {
+            console.error("Erreur de parsing JSON:", parseError);
+            console.error("Réponse qui n'est pas du JSON:", responseText);
+            alert(`Erreur ${response.status}: Réponse invalide du serveur\n\nRéponse: ${responseText.substring(0, 200)}`);
+            setLoading(false);
+            return;
+          }
+        } else {
+          console.warn("Réponse vide ou blanche du serveur");
+          console.warn("responseText:", JSON.stringify(responseText));
+          result = { error: `Réponse vide du serveur (${response.status})` };
+        }
+      } catch (textError: any) {
+        console.error("Erreur lors de la lecture de la réponse:", textError);
+        alert(`Erreur ${response.status}: Impossible de lire la réponse du serveur\n\n${textError.message || "Erreur inconnue"}`);
+        setLoading(false);
+        return;
+      }
+
       if (response.ok) {
         setShowForm(false);
         setEditingAppointment(null);
@@ -133,17 +186,43 @@ export default function AdminAppointmentsPage() {
         alert(editingAppointment ? "Rendez-vous modifié avec succès!" : "Rendez-vous créé avec succès!");
       } else {
         // Afficher un message d'erreur plus détaillé
-        let errorMessage = "Erreur lors de l'opération";
-        if (result.error) {
-          if (typeof result.error === "string") {
-            errorMessage = result.error;
-          } else if (result.error.message) {
-            errorMessage = result.error.message;
-          } else if (result.error._errors && result.error._errors.length > 0) {
-            errorMessage = result.error._errors[0];
+        let errorMessage = `Erreur ${response.status}: Erreur lors de l'opération`;
+        
+        if (result && Object.keys(result).length > 0) {
+          // Gérer le nouveau format avec details
+          if (result.details) {
+            errorMessage = `Erreur ${response.status}: ${result.details}`;
+          } else if (result.message) {
+            errorMessage = `Erreur ${response.status}: ${result.message}`;
+          } else if (result.error) {
+            if (typeof result.error === "string") {
+              errorMessage = `Erreur ${response.status}: ${result.error}`;
+            } else if (result.error.message) {
+              errorMessage = `Erreur ${response.status}: ${result.error.message}`;
+            } else if (result.error._errors && result.error._errors.length > 0) {
+              errorMessage = `Erreur ${response.status}: ${result.error._errors.join(", ")}`;
+            } else if (result.error.endTime && result.error.endTime._errors) {
+              errorMessage = `Erreur ${response.status}: ${result.error.endTime._errors[0]}`;
+            } else if (result.error.startTime && result.error.startTime._errors) {
+              errorMessage = `Erreur ${response.status}: ${result.error.startTime._errors[0]}`;
+            } else if (result.error.patientId && result.error.patientId._errors) {
+              errorMessage = `Erreur ${response.status}: ${result.error.patientId._errors[0]}`;
+            } else if (result.error.doctorId && result.error.doctorId._errors) {
+              errorMessage = `Erreur ${response.status}: ${result.error.doctorId._errors[0]}`;
+            }
           }
+        } else if (responseText) {
+          errorMessage = `Erreur ${response.status}: ${responseText.substring(0, 100)}`;
         }
-        alert("Erreur: " + errorMessage);
+        
+        console.error("Erreur API complète:", {
+          status: response.status,
+          statusText: response.statusText,
+          result: result,
+          responseText: responseText,
+        });
+        
+        alert(errorMessage);
       }
     } catch (error: any) {
       console.error("Erreur:", error);
@@ -320,9 +399,23 @@ export default function AdminAppointmentsPage() {
                 <input
                   type="datetime-local"
                   value={form.startTime}
-                  onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+                  onChange={(e) => {
+                    const startTime = e.target.value;
+                    setForm({ ...form, startTime });
+                    
+                    // Calculer automatiquement l'heure de fin (30 minutes par défaut)
+                    if (startTime && !form.endTime) {
+                      const start = new Date(startTime);
+                      const end = new Date(start.getTime() + 30 * 60000); // +30 minutes
+                      const endTimeStr = end.toISOString().slice(0, 16);
+                      setForm((prev) => ({ ...prev, startTime, endTime: endTimeStr }));
+                    } else {
+                      setForm({ ...form, startTime });
+                    }
+                  }}
                   className="border p-2 rounded w-full"
                   required
+                  min={new Date().toISOString().slice(0, 16)}
                 />
               </div>
 
@@ -334,7 +427,13 @@ export default function AdminAppointmentsPage() {
                   onChange={(e) => setForm({ ...form, endTime: e.target.value })}
                   className="border p-2 rounded w-full"
                   required
+                  min={form.startTime || new Date().toISOString().slice(0, 16)}
                 />
+                {form.startTime && form.endTime && new Date(form.endTime) <= new Date(form.startTime) && (
+                  <p className="text-sm text-red-600 mt-1">
+                    L'heure de fin doit être après l'heure de début
+                  </p>
+                )}
               </div>
             </div>
 

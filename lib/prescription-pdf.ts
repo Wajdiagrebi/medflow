@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
+import { Writable } from 'stream';
 
-// Generate a prescription PDF and return Buffer
 export async function generatePrescriptionPdf(prescription: {
   id: string;
   clinicName?: string;
@@ -10,8 +10,23 @@ export async function generatePrescriptionPdf(prescription: {
   medications?: string;
   instructions?: string;
   createdAt?: Date | string;
-}) {
+}): Promise<Buffer> {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+  // Writable stream pour collecter les chunks PDF
+  const buffers: Buffer[] = [];
+  const stream = new Writable({
+    write(chunk, _encoding, callback) {
+      buffers.push(Buffer.from(chunk));
+      callback();
+    },
+  });
+
+  doc.pipe(stream);
+
+  // ---------------------
+  // Contenu du PDF
+  // ---------------------
 
   // Header
   doc.fontSize(20).text(prescription.clinicName || 'Clinique', { align: 'center' });
@@ -20,7 +35,7 @@ export async function generatePrescriptionPdf(prescription: {
   doc.moveDown(2);
 
   // Date
-  const date = prescription.createdAt 
+  const date = prescription.createdAt
     ? new Date(prescription.createdAt).toLocaleDateString('fr-FR', {
         day: '2-digit',
         month: '2-digit',
@@ -32,11 +47,8 @@ export async function generatePrescriptionPdf(prescription: {
 
   // Patient info
   doc.fontSize(14).text('Informations Patient:', { underline: true });
-  doc.fontSize(12);
-  doc.text(`Nom: ${prescription.patientName || 'N/A'}`);
-  if (prescription.patientAge) {
-    doc.text(`Âge: ${prescription.patientAge} ans`);
-  }
+  doc.fontSize(12).text(`Nom: ${prescription.patientName || 'N/A'}`);
+  if (prescription.patientAge) doc.text(`Âge: ${prescription.patientAge} ans`);
   doc.moveDown();
 
   // Doctor info
@@ -44,13 +56,12 @@ export async function generatePrescriptionPdf(prescription: {
   doc.fontSize(12).text(`Dr. ${prescription.doctorName || 'N/A'}`);
   doc.moveDown(2);
 
-  // Medications
+  // Médicaments
   doc.fontSize(14).text('Médicaments Prescrits:', { underline: true });
   doc.moveDown();
   doc.fontSize(12);
-  
+
   if (prescription.medications) {
-    // Si medications est une chaîne JSON, essayer de la parser
     try {
       const meds = JSON.parse(prescription.medications);
       if (Array.isArray(meds)) {
@@ -65,7 +76,6 @@ export async function generatePrescriptionPdf(prescription: {
         doc.text(prescription.medications);
       }
     } catch {
-      // Si ce n'est pas du JSON, afficher comme texte
       doc.text(prescription.medications);
     }
   } else {
@@ -90,12 +100,8 @@ export async function generatePrescriptionPdf(prescription: {
 
   doc.end();
 
-  // Collect chunks emitted by the PDFDocument stream
-  const buffers: Buffer[] = [];
-  (doc as any).on('data', (chunk: Buffer) => buffers.push(Buffer.from(chunk)));
-
-  await new Promise<void>((resolve) => (doc as any).on('end', () => resolve()));
+  // Attendre la fin du stream pour récupérer le Buffer
+  await new Promise<void>((resolve) => stream.on('finish', () => resolve()));
 
   return Buffer.concat(buffers);
 }
-

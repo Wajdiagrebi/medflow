@@ -14,6 +14,9 @@ import {
   Menu,
   X,
   User,
+  CreditCard,
+  Settings,
+  DollarSign as PricingIcon,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -33,6 +36,8 @@ export default function Navbar() {
     { href: "/admin/appointments", label: "Rendez-vous", icon: Calendar },
     { href: "/admin/invoices", label: "Factures", icon: DollarSign },
     { href: "/admin/dashboard/services", label: "Services", icon: FileText },
+    { href: "/admin/pricing", label: "Tarifs", icon: PricingIcon },
+    { href: "/admin/staff", label: "Staff", icon: Users },
   ];
 
   const doctorLinks = [
@@ -51,6 +56,7 @@ export default function Navbar() {
     { href: "/patient/appointments", label: "Mes Rendez-vous", icon: Calendar },
     { href: "/patient/consultations", label: "Mes Consultations", icon: FileText },
     { href: "/patient/prescriptions", label: "Mes Prescriptions", icon: Pill },
+    { href: "/patient/payment-online", label: "Paiement en Ligne", icon: CreditCard },
     { href: "/patient/dashboard/invoices", label: "Mes Factures", icon: DollarSign },
   ];
 
@@ -94,9 +100,9 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">M</span>
+                <span className="text-white font-bold text-lg">CT</span>
               </div>
-              <span className="font-bold text-xl text-gray-900 dark:text-white">MedFlow</span>
+              <span className="font-bold text-xl text-gray-900 dark:text-white">Clinique Tekup</span>
             </Link>
           </div>
 

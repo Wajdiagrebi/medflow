@@ -10,28 +10,12 @@ function HomeContent() {
   const router = useRouter();
 
   useEffect(() => {
-    // Si l'utilisateur est connecté, rediriger vers son dashboard
     if (status === "authenticated" && session) {
-      const role = session.user.role;
-      switch (role) {
-        case "ADMIN":
-          router.push("/admin/dashboard");
-          break;
-        case "DOCTOR":
-          router.push("/doctor/consultations");
-          break;
-        case "RECEPTIONIST":
-          router.push("/reception/dashboard");
-          break;
-        case "PATIENT":
-          router.push("/patient/dashboard");
-          break;
-        default:
-          router.push("/login");
-      }
+      // Si l'utilisateur est connecté, rediriger vers le dashboard admin
+      router.replace("/admin/dashboard");
     } else if (status === "unauthenticated") {
       // Si l'utilisateur n'est pas connecté, rediriger vers login
-      router.push("/login");
+      router.replace("/login");
     }
   }, [session, status, router]);
 

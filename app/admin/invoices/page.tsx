@@ -15,15 +15,35 @@ export default function AdminInvoicesPage() {
   }, []);
 
   const fetchInvoices = async () => {
-    const r = await fetch("/api/invoices");
-    const data = await r.json();
-    setInvoices(data);
+    try {
+      const r = await fetch("/api/invoices");
+      if (r.ok) {
+        const data = await r.json();
+        setInvoices(data.invoices || []);
+      } else {
+        console.error("Erreur lors du chargement des factures");
+        setInvoices([]);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des factures:", error);
+      setInvoices([]);
+    }
   };
 
   const fetchPatients = async () => {
-    const r = await fetch("/api/patients");
-    const data = await r.json();
-    setPatients(data);
+    try {
+      const r = await fetch("/api/patients");
+      if (r.ok) {
+        const data = await r.json();
+        setPatients(data.patients || []);
+      } else {
+        console.error("Erreur lors du chargement des patients");
+        setPatients([]);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des patients:", error);
+      setPatients([]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

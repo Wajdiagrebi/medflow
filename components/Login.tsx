@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Login from "@react-login-page/page9";
-import LoginBg from "@react-login-page/page9/bg.jpg";
 import "./Login.css";
 
 export default function LoginComponent() {
@@ -19,14 +18,12 @@ export default function LoginComponent() {
     setError("");
     setLoading(true);
 
-    // Validation simple
     if (!email.trim() || !password) {
       setError("Remplis l'email et le mot de passe.");
       setLoading(false);
       return;
     }
 
-    // Vérification du format email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Email invalide.");
@@ -44,10 +41,7 @@ export default function LoginComponent() {
       if (res?.error) {
         setError("Email ou mot de passe incorrect.");
       } else if (res?.ok) {
-        // Redirection basée sur le rôle
-        // On attend un peu pour que la session soit mise à jour
         setTimeout(() => {
-          // On redirige vers admin par défaut, le middleware gérera la redirection selon le rôle
           router.push("/admin/dashboard");
           router.refresh();
         }, 100);
@@ -59,8 +53,6 @@ export default function LoginComponent() {
     }
   };
 
-  // Utiliser le composant @react-login-page/page9 comme wrapper visuel avec arrière-plan
-  // Le formulaire est placé par-dessus avec notre propre style
   return (
     <div className="login-wrapper">
       <div
@@ -73,17 +65,20 @@ export default function LoginComponent() {
           justifyContent: "center",
         }}
       >
-        {/* Composant @react-login-page/page9 comme arrière-plan */}
+        {/* ✅ Utilisation de ton image locale comme fond */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
           <Login
             style={{
               height: "100%",
               width: "100%",
-              backgroundImage: `url(${LoginBg})`,
+              backgroundImage: `url("/cl.jpg")`, // <-- ton image ici
+              backgroundSize: "cover",
+              backgroundPosition: "center",
             }}
           />
         </div>
-        {/* Formulaire personnalisé par-dessus */}
+
+        {/* ✅ Formulaire de connexion */}
         <form className="login-card" onSubmit={handleSubmit}>
           <h2>Connexion</h2>
           <label htmlFor="email">Email</label>
@@ -115,4 +110,3 @@ export default function LoginComponent() {
     </div>
   );
 }
-

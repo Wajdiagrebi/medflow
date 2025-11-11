@@ -1,31 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { SessionProvider, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import DashboardContent from "./DashboardContent";
 import "@/styles/dashboard.css";
 
 // Composant interne qui vérifie l'authentification
+// Note: L'authentification est déjà gérée par le middleware, donc on ne redirige pas ici
 function AuthenticatedDashboard() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [openSidebarToggle, setOpenSidebarToggle] = useState(false);
-
-  useEffect(() => {
-    // Si la session est chargée et qu'il n'y a pas de session, rediriger vers login
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
-  }, [status, router]);
 
   const OpenSidebar = () => {
     setOpenSidebarToggle(!openSidebarToggle);
   };
 
-  // Afficher un loader pendant le chargement
+  // Afficher un loader pendant le chargement de la session
   if (status === "loading") {
     return (
       <div className="grid-container" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -37,10 +29,8 @@ function AuthenticatedDashboard() {
     );
   }
 
-  // Si pas de session, ne rien afficher (la redirection est en cours)
-  if (!session) {
-    return null;
-  }
+  // Si pas de session, afficher quand même le dashboard (le middleware gère l'authentification)
+  // Cela évite les boucles de redirection entre le middleware et le client
 
   return (
     <div className="grid-container">

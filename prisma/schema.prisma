@@ -109,6 +109,7 @@ model Service {
   id          String   @id @default(cuid())
   clinicId    String
   name        String
+  type        String?  // Type de service (ex: Consultation, Examen, Vaccination, etc.)
   description String?
   price       Float
   createdAt   DateTime @default(now())

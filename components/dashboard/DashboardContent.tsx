@@ -7,6 +7,7 @@ import {
   BsCashStack,
   BsFileEarmarkMedical,
   BsFillBellFill,
+  BsPrescription2,
 } from "react-icons/bs";
 import {
   BarChart,
@@ -42,17 +43,16 @@ export default function DashboardContent() {
 
   const { data, error, isLoading } = useSWR(apiUrl, fetcher);
 
-  // Préparer les données pour les graphiques (exemple - à adapter avec les vraies données)
-  // Pour l'instant, on utilise des données de démonstration
-  // TODO: Récupérer les vraies données depuis l'API
-  const chartData = [
-    { name: "Lun", rendezvous: 12, consultations: 8 },
-    { name: "Mar", rendezvous: 15, consultations: 10 },
-    { name: "Mer", rendezvous: 10, consultations: 7 },
-    { name: "Jeu", rendezvous: 18, consultations: 12 },
-    { name: "Ven", rendezvous: 14, consultations: 9 },
-    { name: "Sam", rendezvous: 8, consultations: 5 },
-    { name: "Dim", rendezvous: 5, consultations: 3 },
+  // Préparer les données pour les graphiques depuis l'API
+  // Si les données ne sont pas disponibles, utiliser des données par défaut
+  const chartData = data?.chartData || [
+    { name: "Lun", rendezvous: 0, consultations: 0 },
+    { name: "Mar", rendezvous: 0, consultations: 0 },
+    { name: "Mer", rendezvous: 0, consultations: 0 },
+    { name: "Jeu", rendezvous: 0, consultations: 0 },
+    { name: "Ven", rendezvous: 0, consultations: 0 },
+    { name: "Sam", rendezvous: 0, consultations: 0 },
+    { name: "Dim", rendezvous: 0, consultations: 0 },
   ];
 
   if (isLoading) {
@@ -129,10 +129,10 @@ export default function DashboardContent() {
           color: "#2e7d32",
         },
         {
-          title: "ALERTES",
-          value: data.alerts || 0,
-          icon: BsFillBellFill,
-          color: "#d50000",
+          title: "MES PRESCRIPTIONS",
+          value: data.prescriptions || 0,
+          icon: BsPrescription2,
+          color: "#ffa726",
         },
       ];
     }
@@ -165,53 +165,86 @@ export default function DashboardContent() {
         })}
       </div>
       <div className="charts">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            width={500}
-            height={300}
-            data={chartData}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="rendezvous" fill="#8884d8" />
-            <Bar dataKey="consultations" fill="#82ca9d" />
-          </BarChart>
-        </ResponsiveContainer>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            width={500}
-            height={300}
-            data={chartData}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="rendezvous"
-              stroke="#8884d8"
-              activeDot={{ r: 8 }}
-            />
-            <Line type="monotone" dataKey="consultations" stroke="#82ca9d" />
-          </LineChart>
-        </ResponsiveContainer>
+        <div className="chart-container">
+          <h4 style={{ color: '#fff', marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
+            Rendez-vous et Consultations (Semaine)
+          </h4>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              width={500}
+              height={300}
+              data={chartData}
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+              <XAxis dataKey="name" stroke="#9e9ea4" />
+              <YAxis stroke="#9e9ea4" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#263043', 
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: '#fff'
+                }} 
+              />
+              <Legend wrapperStyle={{ color: '#9e9ea4' }} />
+              <Bar dataKey="rendezvous" fill="#667eea" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="consultations" fill="#4facfe" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="chart-container">
+          <h4 style={{ color: '#fff', marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
+            Tendances (Semaine)
+          </h4>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              width={500}
+              height={300}
+              data={chartData}
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+              <XAxis dataKey="name" stroke="#9e9ea4" />
+              <YAxis stroke="#9e9ea4" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#263043', 
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  color: '#fff'
+                }} 
+              />
+              <Legend wrapperStyle={{ color: '#9e9ea4' }} />
+              <Line
+                type="monotone"
+                dataKey="rendezvous"
+                stroke="#667eea"
+                strokeWidth={3}
+                activeDot={{ r: 8, fill: '#667eea' }}
+                dot={{ r: 4, fill: '#667eea' }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="consultations" 
+                stroke="#4facfe" 
+                strokeWidth={3}
+                activeDot={{ r: 8, fill: '#4facfe' }}
+                dot={{ r: 4, fill: '#4facfe' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </main>
   );

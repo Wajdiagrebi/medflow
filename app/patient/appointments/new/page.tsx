@@ -3,6 +3,14 @@
 import { useState, useEffect } from "react";
 import { Calendar, Clock, User, ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/Toast";
 
 interface Doctor {
   id: string;
@@ -17,13 +25,13 @@ interface Patient {
 }
 
 export default function NewPatientAppointmentPage() {
+  const { data: session } = useSession();
+  const { showToast } = useToast();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState<string>("");
+  const [patient, setPatient] = useState<Patient | null>(null);
   const [form, setForm] = useState({
     doctorId: "",
     startTime: "",
-    endTime: "",
     reason: "",
   });
   const [loading, setLoading] = useState(false);
@@ -31,7 +39,7 @@ export default function NewPatientAppointmentPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [session]);
 
   const fetchData = async () => {
     try {
@@ -42,19 +50,20 @@ export default function NewPatientAppointmentPage() {
         setDoctors(doctorsData || []);
       }
 
-      // Récupérer les patients (pour trouver le patient connecté)
-      const patientsRes = await fetch("/api/patients");
-      if (patientsRes.ok) {
-        const patientsData = await patientsRes.json();
-        setPatients(patientsData || []);
-        // TODO: Sélectionner automatiquement le patient connecté
-        // Pour l'instant, on prend le premier patient
-        if (patientsData && patientsData.length > 0) {
-          setSelectedPatient(patientsData[0].id);
+      // Trouver le patient connecté via son email
+      if (session?.user?.email) {
+        const patientsRes = await fetch("/api/patients");
+        if (patientsRes.ok) {
+          const patientsData = await patientsRes.json();
+          const currentPatient = patientsData.find((p: Patient) => p.email === session.user.email);
+          if (currentPatient) {
+            setPatient(currentPatient);
+          }
         }
       }
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
+      showToast("Erreur lors du chargement des données", "error");
     } finally {
       setLoadingData(false);
     }
@@ -63,10 +72,14 @@ export default function NewPatientAppointmentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedPatient || !form.doctorId || !form.startTime || !form.endTime) {
-      alert("Veuillez remplir tous les champs obligatoires");
+    if (!patient || !form.doctorId || !form.startTime) {
+      showToast("Veuillez remplir tous les champs obligatoires", "error");
       return;
     }
+
+    const startDate = new Date(form.startTime);
+    // Calculer automatiquement l'heure de fin (30 minutes après le début)
+    const endDate = new Date(startDate.getTime() + 30 * 60000);
 
     setLoading(true);
     try {
@@ -74,18 +87,20 @@ export default function NewPatientAppointmentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patientId: selectedPatient,
+          patientId: patient.id,
           doctorId: form.doctorId,
-          startTime: form.startTime,
-          endTime: form.endTime,
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
           reason: form.reason || undefined,
         }),
       });
 
       const result = await res.json();
       if (res.ok) {
-        alert("Rendez-vous créé avec succès!");
-        window.location.href = "/patient/appointments";
+        showToast("Rendez-vous créé avec succès!", "success");
+        setTimeout(() => {
+          window.location.href = "/patient/appointments";
+        }, 1000);
       } else {
         let errorMessage = "Erreur lors de la création du rendez-vous";
         if (result.error) {
@@ -95,29 +110,43 @@ export default function NewPatientAppointmentPage() {
             errorMessage = result.error._errors[0];
           }
         }
-        console.error("Erreur détaillée:", result);
-        alert("Erreur: " + errorMessage);
+        showToast(errorMessage, "error");
       }
     } catch (error: any) {
       console.error("Erreur:", error);
-      alert("Erreur: " + (error.message || "Erreur inconnue"));
+      showToast(error.message || "Erreur inconnue", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculer l'heure de fin automatiquement (30 minutes par défaut)
+  // Mettre à jour l'heure de début (l'heure de fin sera calculée automatiquement lors de la soumission)
   const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const startTime = e.target.value;
-    setForm({ ...form, startTime });
-    
-    if (startTime) {
-      const start = new Date(startTime);
-      const end = new Date(start.getTime() + 30 * 60000); // +30 minutes
-      const endTimeStr = end.toISOString().slice(0, 16);
-      setForm((prev) => ({ ...prev, endTime: endTimeStr }));
-    }
+    setForm({ ...form, startTime: e.target.value });
   };
+
+  if (loadingData) {
+    return (
+      <div className="max-w-3xl mx-auto p-6">
+        <div className="text-center py-8 text-gray-500">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <div className="max-w-3xl mx-auto p-6">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600 mb-4">Patient non trouvé. Veuillez contacter l'administration.</p>
+            <Link href="/patient/dashboard">
+              <Button variant="outline">Retour au tableau de bord</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -133,96 +162,105 @@ export default function NewPatientAppointmentPage() {
           <Plus className="w-8 h-8 text-blue-600" />
           Prendre un Rendez-vous
         </h1>
+        <p className="text-gray-600 mt-2">Réservez votre consultation en ligne</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Sélection du docteur */}
-          <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Docteur *
-            </label>
-            <select
-              value={form.doctorId}
-              onChange={(e) => setForm({ ...form, doctorId: e.target.value })}
-              className="border p-3 rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            >
-              <option value="">Sélectionner un docteur</option>
-              {doctors.map((doctor) => (
-                <option key={doctor.id} value={doctor.id}>
-                  Dr. {doctor.name} ({doctor.email})
-                </option>
-              ))}
-            </select>
-          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Informations du Rendez-vous</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Patient (affiché en lecture seule) */}
+            <div>
+              <Label className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Patient
+              </Label>
+              <Input
+                value={`${patient.name} (${patient.email})`}
+                disabled
+                className="mt-1 bg-gray-50"
+              />
+            </div>
 
-          {/* Date et heure de début */}
-          <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Date et Heure de Début *
-            </label>
-            <input
-              type="datetime-local"
-              value={form.startTime}
-              onChange={handleStartTimeChange}
-              className="border p-3 rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-              min={new Date().toISOString().slice(0, 16)}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              L'heure de fin sera calculée automatiquement (30 minutes)
-            </p>
-          </div>
+            {/* Sélection du docteur */}
+            <div>
+              <Label htmlFor="doctor" className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Docteur *
+              </Label>
+              <Select
+                value={form.doctorId}
+                onValueChange={(value) => setForm({ ...form, doctorId: value })}
+                required
+                disabled={loading}
+              >
+                <SelectTrigger id="doctor" className="mt-1">
+                  <SelectValue placeholder="Sélectionner un docteur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      Dr. {doctor.name} ({doctor.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Date et heure de fin */}
-          <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Date et Heure de Fin *
-            </label>
-            <input
-              type="datetime-local"
-              value={form.endTime}
-              onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-              className="border p-3 rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
+            {/* Date et heure de début */}
+            <div>
+              <Label htmlFor="startTime" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Date et Heure de Début *
+              </Label>
+              <Input
+                id="startTime"
+                type="datetime-local"
+                value={form.startTime}
+                onChange={handleStartTimeChange}
+                className="mt-1"
+                required
+                min={new Date().toISOString().slice(0, 16)}
+                disabled={loading}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                La durée de la consultation est de 30 minutes.
+              </p>
+            </div>
 
-          {/* Raison */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Raison (optionnel)
-            </label>
-            <textarea
-              placeholder="Raison de la consultation..."
-              value={form.reason}
-              onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              className="border p-3 rounded w-full min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
+            {/* Raison */}
+            <div>
+              <Label htmlFor="reason">Raison (optionnel)</Label>
+              <Textarea
+                id="reason"
+                placeholder="Raison de la consultation..."
+                value={form.reason}
+                onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                className="mt-1 min-h-[100px]"
+                disabled={loading}
+              />
+            </div>
 
-          {/* Boutons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="submit"
-              disabled={loading || loadingData}
-              className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {loading ? "Création..." : "Créer le Rendez-vous"}
-            </button>
-            <Link
-              href="/patient/appointments"
-              className="bg-gray-200 text-gray-700 px-6 py-3 rounded hover:bg-gray-300"
-            >
-              Annuler
-            </Link>
-          </div>
-        </form>
-      </div>
+            {/* Boutons */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="submit"
+                disabled={loading || loadingData}
+                className="flex items-center gap-2"
+              >
+                {loading ? "Création..." : "Créer le Rendez-vous"}
+              </Button>
+              <Link href="/patient/appointments">
+                <Button type="button" variant="outline">
+                  Annuler
+                </Button>
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

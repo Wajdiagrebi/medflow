@@ -39,24 +39,24 @@ export async function POST(req: Request) {
       doctorId: session.user.id, // Utiliser l'ID du docteur connecté
     });
 
-    if (!parsed.success) {
-      console.error("Validation error:", JSON.stringify(parsed.error.flatten(), null, 2));
-      console.error("Validation error details:", parsed.error.errors);
-      
-      // Créer un message d'erreur plus détaillé
-      const errorMessages: string[] = [];
-      parsed.error.errors.forEach((err) => {
-        const field = err.path.join(".");
-        const message = err.message;
-        errorMessages.push(`${field}: ${message}`);
-      });
-      
-      return NextResponse.json({ 
-        error: parsed.error.flatten(),
-        message: "Erreur de validation des données",
-        details: errorMessages.join(", ")
-      }, { status: 400 });
-    }
+   if (!parsed.success) {
+  console.error("Validation error:", JSON.stringify(parsed.error.flatten(), null, 2));
+  
+  // Créer un message d'erreur plus détaillé
+  const errorMessages: string[] = [];
+  parsed.error.issues.forEach((err) => {
+    const field = err.path.join(".");
+    const message = err.message;
+    errorMessages.push(`${field}: ${message}`);
+  });
+  
+  return NextResponse.json({ 
+    error: parsed.error.flatten(),
+    message: "Erreur de validation des données",
+    details: errorMessages.join(", ")
+  }, { status: 400 });
+}
+
 
     // Vérifier que le patient existe et appartient à la même clinique
     const patient = await prisma.patient.findUnique({
@@ -177,13 +177,32 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Filtrer par clinique
-    const consultations = await prisma.consultation.findMany({
-      where: {
-        patient: {
+    // Construire la clause where
+    const whereClause: any = {
+      patient: {
+        clinicId: session.user.clinicId,
+      },
+    };
+
+    // Si c'est un patient, filtrer par son ID
+    if (session.user.role === "PATIENT" && session.user.email) {
+      const patient = await prisma.patient.findFirst({
+        where: {
+          email: session.user.email,
           clinicId: session.user.clinicId,
         },
-      },
+      });
+      
+      if (patient) {
+        whereClause.patientId = patient.id;
+      } else {
+        // Si aucun patient trouvé, retourner un tableau vide
+        return NextResponse.json([]);
+      }
+    }
+
+    const consultations = await prisma.consultation.findMany({
+      where: whereClause,
       include: {
         patient: { select: { id: true, name: true, email: true, age: true, condition: true } },
         doctor: { select: { id: true, name: true, email: true } },

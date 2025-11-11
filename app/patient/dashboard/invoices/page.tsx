@@ -29,9 +29,8 @@ export default function PatientInvoicesPage() {
       const res = await fetch("/api/invoices");
       if (res.ok) {
         const data = await res.json();
-        // Filtrer les factures du patient connecté (côté client pour l'instant)
-        // TODO: Filtrer côté serveur avec l'ID du patient connecté
-        setInvoices(data || []);
+        // L'API retourne { invoices: [...] }
+        setInvoices(data.invoices || []);
       }
     } catch (error) {
       console.error("Erreur lors du chargement des factures:", error);

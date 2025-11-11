@@ -10,6 +10,7 @@ import {
   BsFileEarmarkMedical,
   BsPrescription2,
   BsX,
+  BsCreditCard,
 } from "react-icons/bs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,6 +39,8 @@ export default function Sidebar({ openSidebarToggle, OpenSidebar }: SidebarProps
           { href: "/admin/appointments", label: "Rendez-vous", icon: BsCalendar3 },
           { href: "/admin/invoices", label: "Factures", icon: BsCashStack },
           { href: "/admin/dashboard/services", label: "Services", icon: BsFileText },
+          { href: "/admin/pricing", label: "Tarifs", icon: BsCashStack },
+          { href: "/admin/staff", label: "Staff", icon: BsPeopleFill },
         ];
       case "DOCTOR":
         return [
@@ -56,6 +59,8 @@ export default function Sidebar({ openSidebarToggle, OpenSidebar }: SidebarProps
           { href: "/patient/appointments", label: "Mes Rendez-vous", icon: BsCalendar3 },
           { href: "/patient/consultations", label: "Mes Consultations", icon: BsFileEarmarkMedical },
           { href: "/patient/prescriptions", label: "Mes Prescriptions", icon: BsPrescription2 },
+          { href: "/patient/documents", label: "Mes Documents", icon: BsFileText },
+          { href: "/patient/payment-online", label: "Paiement en Ligne", icon: BsCreditCard },
           { href: "/patient/dashboard/invoices", label: "Mes Factures", icon: BsCashStack },
         ];
       default:
@@ -73,7 +78,7 @@ export default function Sidebar({ openSidebarToggle, OpenSidebar }: SidebarProps
     >
       <div className="sidebar-title">
         <div className="sidebar-brand">
-          <BsGrid1X2Fill className="icon_header" /> MedFlow
+          <BsGrid1X2Fill className="icon_header" /> Clinique Tekup
         </div>
         <span className="icon close_icon" onClick={OpenSidebar}>
           <BsX />

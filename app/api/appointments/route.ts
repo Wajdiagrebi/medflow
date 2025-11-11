@@ -17,8 +17,30 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Si c'est un patient, filtrer par son ID
+    const whereClause: any = {
+      Patient: { clinicId: session.user.clinicId },
+    };
+
+    if (session.user.role === "PATIENT" && session.user.id && session.user.email) {
+      // Trouver le patient correspondant à l'utilisateur connecté
+      const patient = await prisma.patient.findFirst({
+        where: {
+          email: session.user.email,
+          clinicId: session.user.clinicId,
+        },
+      });
+      
+      if (patient) {
+        whereClause.patientId = patient.id;
+      } else {
+        // Si aucun patient trouvé, retourner un tableau vide
+        return NextResponse.json([]);
+      }
+    }
+
     const appts = await prisma.appointment.findMany({
-      where: { Patient: { clinicId: session.user.clinicId } },
+      where: whereClause,
       include: { Patient: true, Doctor: { select: { id: true, name: true, email: true } } },
       orderBy: { startTime: "desc" },
     });

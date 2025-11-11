@@ -18,7 +18,24 @@ export default withAuth(
     // Si l'utilisateur est sur la page de login et déjà authentifié, rediriger vers le dashboard approprié
     if (pathname === "/login" && token) {
       const role = token.role as string;
-      let redirectUrl = "/dashboard"; // Page par défaut qui redirigera selon le rôle
+      let redirectUrl = "/admin/dashboard"; // Page par défaut
+      
+      switch (role) {
+        case "ADMIN":
+          redirectUrl = "/admin/dashboard";
+          break;
+        case "DOCTOR":
+          redirectUrl = "/doctor/consultations";
+          break;
+        case "RECEPTIONIST":
+          redirectUrl = "/reception/dashboard";
+          break;
+        case "PATIENT":
+          redirectUrl = "/patient/dashboard";
+          break;
+        default:
+          redirectUrl = "/admin/dashboard";
+      }
       
       return NextResponse.redirect(new URL(redirectUrl, req.url));
     }

@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       const pdfBuffer = await generatePrescriptionPdf({
         id: prescription.id,
         clinicName: "Clinique Demo",
-        doctorName: consultation.doctor.name,
+        doctorName: consultation.doctor.name || undefined,
         patientName: consultation.patient.name,
         patientAge: consultation.patient.age,
         medications: prescription.medications || undefined,
@@ -122,13 +122,32 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Filtrer par clinique
-    const prescriptions = await prisma.prescription.findMany({
-      where: {
-        patient: {
+    // Construire la clause where
+    const whereClause: any = {
+      patient: {
+        clinicId: session.user.clinicId,
+      },
+    };
+
+    // Si c'est un patient, filtrer par son ID
+    if (session.user.role === "PATIENT" && session.user.email) {
+      const patient = await prisma.patient.findFirst({
+        where: {
+          email: session.user.email,
           clinicId: session.user.clinicId,
         },
-      },
+      });
+      
+      if (patient) {
+        whereClause.patientId = patient.id;
+      } else {
+        // Si aucun patient trouvé, retourner un tableau vide
+        return NextResponse.json([]);
+      }
+    }
+
+    const prescriptions = await prisma.prescription.findMany({
+      where: whereClause,
       include: {
         patient: { select: { id: true, name: true, email: true } },
         doctor: { select: { id: true, name: true, email: true } },

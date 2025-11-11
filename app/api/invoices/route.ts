@@ -17,6 +17,32 @@ const invoiceSchema = z.object({
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  // Les patients peuvent aussi voir leurs factures
+  if (session.user.role === "PATIENT" && session.user.email) {
+    // Trouver le patient correspondant à l'utilisateur connecté
+    const patient = await prisma.patient.findFirst({
+      where: {
+        email: session.user.email,
+        clinicId: session.user.clinicId,
+      },
+    });
+    
+    if (!patient) {
+      return NextResponse.json({ invoices: [] });
+    }
+    
+    const invoices = await prisma.invoice.findMany({
+      where: { 
+        patientId: patient.id,
+        clinicId: session.user.clinicId,
+      },
+      include: { patient: true, appointment: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return NextResponse.json({ invoices });
+  }
+  
   if (!["ADMIN", "RECEPTIONIST"].includes(session.user.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -25,7 +51,7 @@ export async function GET() {
     include: { patient: true, appointment: true },
     orderBy: { createdAt: 'desc' },
   });
-  return NextResponse.json(invoices);
+  return NextResponse.json({ invoices });
 }
 
 export async function POST(req: Request) {
