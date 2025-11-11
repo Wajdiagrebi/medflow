@@ -10,7 +10,7 @@ import "@/styles/dashboard.css";
 // Composant interne qui vérifie l'authentification
 // Note: L'authentification est déjà gérée par le middleware, donc on ne redirige pas ici
 function AuthenticatedDashboard() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [openSidebarToggle, setOpenSidebarToggle] = useState(false);
 
   const OpenSidebar = () => {
@@ -20,7 +20,14 @@ function AuthenticatedDashboard() {
   // Afficher un loader pendant le chargement de la session
   if (status === "loading") {
     return (
-      <div className="grid-container" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div
+        className="grid-container"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-300">Chargement...</p>
@@ -51,4 +58,3 @@ export default function DashboardLayout() {
     </SessionProvider>
   );
 }
-

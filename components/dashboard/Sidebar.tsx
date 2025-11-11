@@ -55,7 +55,6 @@ export default function Sidebar({ openSidebarToggle, OpenSidebar }: SidebarProps
         ];
       case "PATIENT":
         return [
-          { href: "/patient/dashboard", label: "Dashboard", icon: BsGrid1X2Fill },
           { href: "/patient/appointments", label: "Mes Rendez-vous", icon: BsCalendar3 },
           { href: "/patient/consultations", label: "Mes Consultations", icon: BsFileEarmarkMedical },
           { href: "/patient/prescriptions", label: "Mes Prescriptions", icon: BsPrescription2 },

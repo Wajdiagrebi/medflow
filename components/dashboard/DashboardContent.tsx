@@ -97,7 +97,7 @@ export default function DashboardContent() {
         },
         {
           title: "RECETTES",
-          value: `€ ${(data.revenue || 0).toLocaleString("fr-FR")}`,
+          value: `${(data.revenue || 0).toLocaleString("fr-FR")} DT`,
           icon: BsCashStack,
           color: "#2e7d32",
         },
